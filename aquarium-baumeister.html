@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>🐠 Aquarium-Baumeister</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --header-h: 52px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    body {
+      font-family: 'Nunito', -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+      background: #03045e;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* ═══════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════ */
+    #header {
+      flex-shrink: 0;
+      height: calc(var(--header-h) + var(--safe-top));
+      padding-top: var(--safe-top);
+      background: linear-gradient(135deg, #03045e 0%, #0077b6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 13px;
+      padding-right: 12px;
+      box-shadow: 0 3px 18px rgba(0,0,0,0.45);
+      position: relative;
+      z-index: 20;
+    }
+    .hdr-logo { display: flex; align-items: center; gap: 9px; }
+    .hdr-icon { font-size: 1.85rem; line-height: 1; }
+    .hdr-title {
+      font-size: 1.05rem; font-weight: 900; color: white; line-height: 1.2;
+    }
+    .hdr-sub { font-size: 0.64rem; color: #90e0ef; font-weight: 700; margin-top: 1px; }
+    #fs-btn {
+      background: rgba(255,255,255,0.14);
+      border: 1.5px solid rgba(255,255,255,0.28);
+      border-radius: 10px;
+      width: 40px; height: 40px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    #fs-btn:active { background: rgba(255,255,255,0.32); transform: scale(0.88); }
+    #fs-btn svg { width: 20px; height: 20px; fill: white; display: block; }
+
+    /* ═══════════════════════════════════════
+       CONTENT STACK
+    ═══════════════════════════════════════ */
+    #content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+      background: #e8f4fd;
+      padding-bottom: var(--safe-bot);
+    }
+
+    /* ═══════════════════════════════════════
+       AQUARIUM
+    ═══════════════════════════════════════ */
+    #aq-wrap {
+      flex: 1;
+      min-height: 0;
+      padding: 8px 10px 5px;
+    }
+    #aquarium-box {
+      width: 100%; height: 100%;
+      border-radius: 18px;
+      border: 3.5px solid #48cae4;
+      box-shadow: 0 8px 36px rgba(0,119,182,0.5), inset 0 0 0 1px rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg,
+        #03045e 0%, #023e8a 12%, #0077b6 35%,
+        #0096c7 58%, #48cae4 82%, #ade8f4 100%
+      );
+    }
+    #aquarium-box::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+      background:
+        radial-gradient(ellipse 75% 38% at 45% 0%, rgba(255,255,255,0.16) 0%, transparent 60%),
+        radial-gradient(ellipse 35% 55% at 86% 8%, rgba(144,224,239,0.1) 0%, transparent 50%);
+    }
+    #aquarium-box::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 6px; z-index: 2;
+      background: repeating-linear-gradient(90deg,
+        rgba(255,255,255,0.28) 0, rgba(255,255,255,0.28) 8px,
+        transparent 8px, transparent 18px);
+    }
+    #total-badge {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,0.36);
+      backdrop-filter: blur(6px);
+      color: white; border-radius: 99px;
+      padding: 4px 11px;
+      font-size: 0.78rem; font-weight: 900;
+      z-index: 10; pointer-events: none;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+    .aqua-floor {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 48px;
+      background: linear-gradient(180deg, #f4a261 0%, #e76f51 55%, #c1440e 100%);
+      border-radius: 60% 60% 0 0 / 22px 22px 0 0;
+      z-index: 5;
+    }
+    .aqua-decos {
+      position: absolute; bottom: 32px; left: 0; right: 0;
+      display: flex; justify-content: space-around; align-items: flex-end;
+      padding: 0 5px; z-index: 6; pointer-events: none;
+    }
+    .aqua-decos span { font-size: 1.15rem; line-height: 1; }
+    .seaweed {
+      position: absolute; bottom: 44px;
+      font-size: 1.55rem; line-height: 1;
+      z-index: 4; transform-origin: bottom center;
+      animation: sway 3.5s ease-in-out infinite;
+    }
+    @keyframes sway {
+      0%,100% { transform: rotate(-12deg); }
+      50%      { transform: rotate(12deg); }
+    }
+    .bubble {
+      position: absolute; border-radius: 50%;
+      background: radial-gradient(ellipse at 30% 28%,
+        rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.1) 60%, transparent 100%);
+      border: 1px solid rgba(255,255,255,0.35);
+      animation: bubble-rise linear infinite;
+      z-index: 3; pointer-events: none;
+    }
+    @keyframes bubble-rise {
+      0%   { transform: translateY(0) translateX(0); opacity: 0; }
+      8%   { opacity: 0.85; }
+      92%  { opacity: 0.25; }
+      100% { transform: translateY(-420px) translateX(var(--drift,12px)); opacity: 0; }
+    }
+    .aqua-animal {
+      position: absolute; line-height: 1; z-index: 4; pointer-events: none;
+      filter: drop-shadow(0 3px 7px rgba(0,0,0,0.45));
+    }
+    @keyframes animal-swim {
+      /* Emojis zeigen nach links → scaleX(-1) = nach rechts = vorwärts beim Rechtsschwimmen */
+      0%   { transform: translateX(calc(var(--sw,24px) * -1)) translateY(0)             scaleX(-1); }
+      47%  { transform: translateX(var(--sw,24px))            translateY(var(--bh,-9px)) scaleX(-1); }
+      50%  { transform: translateX(var(--sw,24px))            translateY(var(--bh,-9px)) scaleX(1);  }
+      97%  { transform: translateX(calc(var(--sw,24px) * -1)) translateY(0)             scaleX(1);  }
+      100% { transform: translateX(calc(var(--sw,24px) * -1)) translateY(0)             scaleX(-1); }
+    }
+    @keyframes animal-swim-in {
+      0%   { transform: translateX(-70px) scale(0.4) rotate(-12deg); opacity: 0; }
+      65%  { transform: translateX(6px) scale(1.2) rotate(3deg); opacity: 1; }
+      100% { transform: translateX(0) scale(1) rotate(0); opacity: 1; }
+    }
+    @keyframes animal-crawl {
+      0%   { transform: translateX(calc(var(--sw,18px) * -1)) scaleX(-1); }
+      47%  { transform: translateX(var(--sw,18px))            scaleX(-1); }
+      50%  { transform: translateX(var(--sw,18px))            scaleX(1);  }
+      97%  { transform: translateX(calc(var(--sw,18px) * -1)) scaleX(1);  }
+      100% { transform: translateX(calc(var(--sw,18px) * -1)) scaleX(-1); }
+    }
+    #aquarium-empty {
+      position: absolute; inset: 0; z-index: 4;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; pointer-events: none;
+    }
+    .empty-hint { font-size: 2.4rem; }
+    .empty-text {
+      background: rgba(255,255,255,0.13);
+      border: 1.5px dashed rgba(255,255,255,0.4);
+      border-radius: 16px; padding: 10px 18px;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.8rem; font-weight: 800;
+      text-align: center; max-width: 200px; line-height: 1.4;
+    }
+
+    /* ═══════════════════════════════════════
+       REIHEN-SELECTOR (2×5 Grid)
+    ═══════════════════════════════════════ */
+    #reihen-panel {
+      flex-shrink: 0;
+      padding: 4px 10px 3px;
+    }
+    #reihen-selector {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(2, 30px);
+      gap: 5px;
+    }
+    .reihe-btn {
+      height: 100%;
+      border-radius: 50%;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 0.85rem;
+      cursor: pointer;
+      border: 2.5px solid transparent;
+      transition: transform 0.17s ease, box-shadow 0.17s;
+      touch-action: manipulation;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+    }
+    .reihe-btn:active { transform: scale(0.83) !important; }
+    .reihe-btn.active {
+      transform: scale(1.16);
+      box-shadow: 0 5px 18px rgba(0,0,0,0.3);
+      border-color: rgba(255,255,255,0.5) !important;
+    }
+    .reihe-btn.done::after {
+      content: '✓';
+      position: absolute; bottom: -1px; right: -1px;
+      background: #10b981; color: white;
+      border-radius: 50%; width: 16px; height: 16px;
+      font-size: 9px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      border: 1.5px solid white;
+    }
+
+    /* ═══════════════════════════════════════
+       INFO STRIP
+    ═══════════════════════════════════════ */
+    #info-strip {
+      flex-shrink: 0;
+      margin: 0 10px 5px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,119,182,0.13);
+      padding: 7px 13px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    #info-emoji { font-size: 2.1rem; line-height: 1; flex-shrink: 0; }
+    .info-mid { flex: 1; min-width: 0; }
+    #info-name {
+      font-size: 0.94rem; font-weight: 900; color: #1e3a5f;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #info-reihe { font-size: 0.7rem; font-weight: 700; color: #64748b; }
+    .info-right { text-align: right; flex-shrink: 0; }
+    #info-count {
+      font-size: 1.3rem; font-weight: 900; color: #0077b6; line-height: 1.1;
+    }
+    .info-lbl { font-size: 0.63rem; color: #94a3b8; font-weight: 700; }
+
+    /* ═══════════════════════════════════════
+       FRAGE-BEREICH
+    ═══════════════════════════════════════ */
+    #question-area {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 2px 11px 10px;
+      gap: 7px;
+    }
+    #feedback-text {
+      text-align: center;
+      font-size: 0.98rem; font-weight: 800;
+      min-height: 24px; color: #94a3b8;
+      flex-shrink: 0;
+    }
+    #question-text {
+      text-align: center;
+      font-size: clamp(2.8rem, 9vw, 4rem);
+      font-weight: 900; letter-spacing: -2px;
+      color: #1e3a5f; line-height: 1;
+      flex-shrink: 0;
+    }
+    #answers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    /* ═══════════════════════════════════════
+       EINGABEFELD
+    ═══════════════════════════════════════ */
+    #answer-area {
+      display: flex; gap: 10px; align-items: stretch; flex-shrink: 0;
+    }
+    #answer-input {
+      flex: 1;
+      font-family: 'Nunito', sans-serif;
+      font-size: 2.2rem; font-weight: 900;
+      text-align: center; color: #1e3a5f;
+      background: white;
+      border: 3.5px solid #bfdbfe;
+      border-radius: 18px;
+      padding: 8px 12px; min-height: 68px;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      -moz-appearance: textfield;
+    }
+    #answer-input::-webkit-outer-spin-button,
+    #answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #answer-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    }
+    #answer-input.correct { background: #d1fae5; border-color: #10b981; color: #064e3b; }
+    #answer-input.wrong {
+      background: #fee2e2; border-color: #ef4444; color: #7f1d1d;
+      animation: shake 0.36s ease;
+    }
+    #answer-submit {
+      width: 72px; flex-shrink: 0;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: white; border: none; border-radius: 18px;
+      font-size: 1.9rem; font-weight: 900; font-family: 'Nunito', sans-serif;
+      cursor: pointer; box-shadow: 0 4px 0 #005f8e;
+      position: relative; top: 0;
+      transition: top 0.1s, box-shadow 0.1s; touch-action: manipulation;
+    }
+    #answer-submit:not(:disabled):active { top: 4px; box-shadow: 0 0 0 #005f8e; }
+    #answer-submit:disabled { opacity: 0.4; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-8px); }
+      40%,80%  { transform: translateX(8px); }
+    }
+
+    /* ═══════════════════════════════════════
+       FORTSCHRITT
+    ═══════════════════════════════════════ */
+    #progress-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; flex-shrink: 0;
+    }
+    #progress-dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .prog-dot {
+      width: 17px; height: 17px; border-radius: 50%;
+      border: 2.5px solid #bfdbfe; background: #f0f9ff;
+      transition: all 0.32s ease;
+    }
+    .prog-dot.done { background: #10b981; border-color: #059669; }
+    .prog-dot.current {
+      border-color: #3b82f6; background: #dbeafe;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.22);
+    }
+    #prog-label { font-size: 0.85rem; font-weight: 900; color: #0077b6; min-width: 38px; }
+
+    #reset-btn {
+      background: rgba(255,255,255,0.14);
+      border: 1.5px solid rgba(255,255,255,0.28);
+      border-radius: 10px;
+      width: 40px; height: 40px;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      transition: background 0.15s;
+    }
+    #reset-btn:active { background: rgba(255,60,60,0.35); transform: scale(0.88); }
+
+    /* Reset-Bestätigungsdialog */
+    #reset-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: rgba(0,4,40,0.75); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #reset-overlay.hidden { display: none; }
+    #reset-card {
+      background: white; border-radius: 24px; padding: 28px 24px 24px;
+      text-align: center; width: min(320px, 88vw);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      animation: pop-in 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both;
+    }
+    #reset-card h3 { font-size: 1.4rem; font-weight: 900; color: #1e3a5f; margin-bottom: 8px; }
+    #reset-card p  { font-size: 0.88rem; color: #64748b; font-weight: 700; margin-bottom: 20px; line-height: 1.45; }
+    .reset-btns { display: flex; gap: 10px; }
+    #reset-cancel {
+      flex: 1; padding: 13px; border: 2.5px solid #bfdbfe; background: white;
+      border-radius: 14px; font-family: 'Nunito', sans-serif;
+      font-size: 1rem; font-weight: 900; color: #0077b6; cursor: pointer;
+    }
+    #reset-confirm {
+      flex: 1; padding: 13px; border: none;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-radius: 14px; font-family: 'Nunito', sans-serif;
+      font-size: 1rem; font-weight: 900; color: white; cursor: pointer;
+      box-shadow: 0 4px 0 #b91c1c;
+    }
+    #reset-confirm:active { transform: translateY(4px); box-shadow: none; }
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,4,40,0.72);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    #overlay.hidden { display: none; }
+    @keyframes pop-in {
+      0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+      72%  { transform: scale(1.08) rotate(2deg); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    #cel-card {
+      background: white; border-radius: 28px;
+      padding: 30px 26px 26px;
+      text-align: center; width: min(340px, 88vw);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      animation: pop-in 0.52s cubic-bezier(0.175,0.885,0.32,1.275) both;
+    }
+    #cel-emoji { font-size: 5rem; line-height: 1; margin-bottom: 10px; }
+    #cel-title { font-size: 1.65rem; font-weight: 900; color: #1e3a5f; margin-bottom: 6px; }
+    #cel-text  { font-size: 0.93rem; color: #64748b; font-weight: 700; line-height: 1.5; margin-bottom: 20px; }
+    #cel-btn {
+      display: block; width: 100%;
+      background: linear-gradient(135deg, #0077b6, #00b4d8);
+      color: white; border: none; border-radius: 18px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1.2rem; font-weight: 900; padding: 15px;
+      cursor: pointer; box-shadow: 0 6px 0 #005f8e;
+      position: relative; top: 0;
+      transition: top 0.1s, box-shadow 0.1s; touch-action: manipulation;
+    }
+    #cel-btn:active { top: 6px; box-shadow: 0 0 0 #005f8e; }
+
+    /* ═══════════════════════════════════════
+       KONFETTI
+    ═══════════════════════════════════════ */
+    .confetti-p {
+      position: fixed; border-radius: 2px;
+      animation: confetti-fall linear forwards;
+      pointer-events: none; z-index: 200;
+    }
+    @keyframes confetti-fall {
+      0%   { opacity: 1; transform: translateY(-12px) rotate(0deg); }
+      100% { opacity: 0; transform: translateY(108vh) rotate(var(--rot)); }
+    }
+
+    /* ═══════════════════════════════════════
+       COUNT PULSE
+    ═══════════════════════════════════════ */
+    @keyframes count-pulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.45); }
+    }
+    .count-pulse { animation: count-pulse 0.38s ease; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="hdr-logo">
+    <span class="hdr-icon">🐠</span>
+    <div>
+      <div class="hdr-title">Aquarium-Baumeister</div>
+      <div class="hdr-sub">Kleines Einmaleins · Klasse 2</div>
+    </div>
+  </div>
+  <button id="reset-btn" aria-label="Zurücksetzen" title="Alles zurücksetzen">🗑️</button>
+  <button id="fs-btn" aria-label="Vollbild">
+    <svg id="icon-expand"   viewBox="0 0 24 24"><path d="M3 3h7v2H5v5H3V3zm11 0h7v7h-2V5h-5V3zM3 14h2v5h5v2H3v-7zm16 5h-5v2h7v-7h-2v5z"/></svg>
+    <svg id="icon-compress" viewBox="0 0 24 24" style="display:none;"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+  </button>
+</header>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- AQUARIUM -->
+  <div id="aq-wrap">
+    <div id="aquarium-box">
+      <div id="aquarium-empty">
+        <div class="empty-hint">🌊</div>
+        <div class="empty-text">Löse Aufgaben, um Tiere zu sammeln!</div>
+      </div>
+      <div id="total-badge">🌊 leer</div>
+      <div class="seaweed" style="left:7%;">🌿</div>
+      <div class="seaweed" style="left:46%;animation-delay:-1.4s;animation-duration:2.9s;">🌿</div>
+      <div class="seaweed" style="left:87%;animation-delay:-0.6s;">🌿</div>
+      <div class="aqua-floor"></div>
+      <div class="aqua-decos">
+        <span>🪨</span><span>🐚</span><span>🪨</span><span>🐚</span><span>🪨</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- REIHEN SELECTOR -->
+  <div id="reihen-panel">
+    <div id="reihen-selector"></div>
+  </div>
+
+  <!-- INFO STRIP -->
+  <div id="info-strip">
+    <span id="info-emoji">🐡</span>
+    <div class="info-mid">
+      <div id="info-name">Kugelfisch</div>
+      <div id="info-reihe">2er-Reihe</div>
+    </div>
+    <div class="info-right">
+      <div id="info-count">0 🐡</div>
+      <div class="info-lbl">im Aquarium</div>
+    </div>
+  </div>
+
+  <!-- FRAGE -->
+  <div id="question-area">
+    <div id="feedback-text">Wähle eine Reihe!</div>
+    <div id="question-text">– – –</div>
+    <div id="answer-area">
+      <input id="answer-input" type="number" inputmode="numeric" pattern="[0-9]*"
+             min="0" max="200" placeholder="?" autocomplete="off">
+      <button id="answer-submit" aria-label="Bestätigen">✓</button>
+    </div>
+    <div id="progress-row">
+      <div id="progress-dots"></div>
+      <span id="prog-label">0 / 10</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- RESET-DIALOG -->
+<div id="reset-overlay" class="hidden">
+  <div id="reset-card">
+    <div style="font-size:2.8rem; margin-bottom:10px;">🗑️</div>
+    <h3>Alles löschen?</h3>
+    <p>Alle Tiere im Aquarium und alle Fortschritte werden dauerhaft gelöscht.</p>
+    <div class="reset-btns">
+      <button id="reset-cancel">Abbrechen</button>
+      <button id="reset-confirm">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- FEIER -->
+<div id="overlay" class="hidden">
+  <div id="cel-card">
+    <div id="cel-emoji">🎉</div>
+    <div id="cel-title"></div>
+    <div id="cel-text"></div>
+    <button id="cel-btn">Weiter! 🚀</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const TIERE = {
+  1:  { emoji:'🐠', name:'Clownfisch',   col:'#ff7675' },
+  2:  { emoji:'🐡', name:'Kugelfisch',   col:'#a29bfe' },
+  3:  { emoji:'🦑', name:'Tintenfisch',  col:'#6c5ce7' },
+  4:  { emoji:'🐙', name:'Oktopus',      col:'#fd79a8' },
+  5:  { emoji:'🦈', name:'Hai',          col:'#74b9ff' },
+  6:  { emoji:'🐬', name:'Delfin',       col:'#0984e3' },
+  7:  { emoji:'🐋', name:'Wal',          col:'#56cfcf' },
+  8:  { emoji:'🦞', name:'Hummer',       col:'#e17055' },
+  9:  { emoji:'🐢', name:'Schildkröte',  col:'#00b894' },
+  10: { emoji:'🦀', name:'Krabbe',       col:'#e84393' },
+};
+
+const STORAGE_KEY = 'aquarium_baumeister_v3';
+
+let state = {
+  reihe: 2, factor: null,
+  progress: {}, aquarium: [], completed: new Set(),
+};
+
+function loadState() {
+  try {
+    const p = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    state.aquarium  = p.aquarium  || [];
+    state.completed = new Set(p.completed || []);
+  } catch(_) {}
+  for (let i = 1; i <= 10; i++) state.progress[i] = new Set();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    aquarium: state.aquarium, completed: [...state.completed],
+  }));
+}
+
+// ── Aufgaben ──────────────────────────────────────────
+function getRemaining(r) {
+  return [1,2,3,4,5,6,7,8,9,10].filter(f => !state.progress[r].has(f));
+}
+
+function nextQuestion() {
+  const rem = getRemaining(state.reihe);
+  if (!rem.length) { triggerCompletion(); return; }
+  state.factor = rem[Math.floor(Math.random() * rem.length)];
+  renderQuestion();
+  renderProgress();
+}
+
+function buildChoices(r, f) {
+  const c = r * f;
+  const pool = new Set();
+  [r,-r,1,-1,2,-2,r*2,-r*2,r-1,r+1].forEach(d => {
+    const v = c + d;
+    if (v > 0 && v <= 110 && v !== c) pool.add(v);
+  });
+  [1,2,3,4,5,6,7,8,9,10].forEach(x => { const v = r*x; if (v!==c) pool.add(v); });
+  const arr = [...pool].sort(() => Math.random()-0.5).slice(0,3);
+  return [c,...arr].sort(() => Math.random()-0.5);
+}
+
+// ── Render ────────────────────────────────────────────
+function renderReihenSelector() {
+  const sel = document.getElementById('reihen-selector');
+  sel.innerHTML = '';
+  for (let i = 1; i <= 10; i++) {
+    const t = TIERE[i], active = state.reihe===i, done = state.completed.has(i);
+    const btn = document.createElement('button');
+    btn.className = `reihe-btn${active?' active':''}${done?' done':''}`;
+    btn.style.background  = active ? t.col : '#dbeafe';
+    btn.style.color       = active ? 'white' : '#0077b6';
+    btn.style.borderColor = active ? 'rgba(255,255,255,0.5)' : 'transparent';
+    btn.setAttribute('aria-label', `${i}er-Reihe`);
+    btn.innerHTML = done && !active ? t.emoji : i;
+    btn.onclick = () => selectReihe(i);
+    sel.appendChild(btn);
+  }
+}
+
+function renderInfoCard() {
+  const t = TIERE[state.reihe];
+  const cnt = state.aquarium.filter(a => a.reihe===state.reihe).length;
+  document.getElementById('info-emoji').textContent = t.emoji;
+  document.getElementById('info-name').textContent  = t.name;
+  document.getElementById('info-reihe').textContent = `${state.reihe}er-Reihe`;
+  const el = document.getElementById('info-count');
+  el.textContent = `${cnt} ${t.emoji}`;
+  el.classList.remove('count-pulse');
+  void el.offsetWidth;
+  el.classList.add('count-pulse');
+  setTimeout(() => el.classList.remove('count-pulse'), 400);
+}
+
+function renderQuestion() {
+  const {reihe:r, factor:f} = state;
+  const col = TIERE[r].col;
+  const qEl = document.getElementById('question-text');
+  qEl.innerHTML = `${f} × <span style="color:${col};text-shadow:0 1px 0 rgba(0,0,0,0.08)">${r}</span> = ?`;
+  const fb = document.getElementById('feedback-text');
+  fb.textContent = '✏️ Tippe deine Antwort ein!';
+  fb.style.color = '#94a3b8';
+  const input = document.getElementById('answer-input');
+  input.value = '';
+  input.className = '';
+  input.disabled = false;
+  document.getElementById('answer-submit').disabled = false;
+  setTimeout(() => input.focus(), 80);
+}
+
+function submitAnswer() {
+  const input  = document.getElementById('answer-submit').disabled ? null
+                : document.getElementById('answer-input');
+  if (!input) return;
+  const val    = parseInt(input.value, 10);
+  if (isNaN(val) || input.value === '') return;
+
+  const correct = state.reihe * state.factor;
+  const fb      = document.getElementById('feedback-text');
+  input.disabled = true;
+  document.getElementById('answer-submit').disabled = true;
+
+  if (val === correct) {
+    input.classList.add('correct');
+    fb.textContent = '✅ Super! Das ist richtig!'; fb.style.color = '#059669';
+    state.progress[state.reihe].add(state.factor);
+    addAnimal(state.reihe);
+    setTimeout(() => nextQuestion(), 900);
+  } else {
+    input.classList.add('wrong');
+    fb.textContent = '❌ Fast! Versuch es nochmal.'; fb.style.color = '#dc2626';
+    setTimeout(() => {
+      input.value = '';
+      input.className = '';
+      input.disabled = false;
+      document.getElementById('answer-submit').disabled = false;
+      fb.textContent = '💪 Du schaffst das!'; fb.style.color = '#0077b6';
+      input.focus();
+    }, 950);
+  }
+}
+
+function renderProgress() {
+  const done = state.progress[state.reihe].size;
+  document.getElementById('prog-label').textContent = `${done} / 10`;
+  const el = document.getElementById('progress-dots');
+  el.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const d = document.createElement('div');
+    d.className = `prog-dot${i<done?' done':''}${i===done?' current':''}`;
+    el.appendChild(d);
+  }
+}
+
+function renderAquarium(entering = false) {
+  document.querySelectorAll('.aqua-animal').forEach(e => e.remove());
+  const box = document.getElementById('aquarium-box');
+  document.getElementById('aquarium-empty').style.display =
+    state.aquarium.length ? 'none' : 'flex';
+  state.aquarium.forEach((a, idx) =>
+    box.appendChild(buildAnimalEl(a, entering && idx===state.aquarium.length-1)));
+  const cnt = state.aquarium.length;
+  document.getElementById('total-badge').textContent =
+    cnt ? `🐠 ${cnt}` : '🌊 leer';
+}
+
+function buildAnimalEl(a, entering) {
+  const el = document.createElement('div');
+  el.className = 'aqua-animal';
+  el.textContent = a.emoji;
+  el.style.left = `${a.x}%`; el.style.top = `${a.y}%`;
+  el.style.fontSize = `${a.size}rem`;
+  el.style.setProperty('--sw', `${a.sw || 22}px`);
+  // Bodentiere: vor dem Sand (z-index 7), Freischwimmer dahinter (z-index 4)
+  const isFloor = a.floor || a.reihe === 8 || a.reihe === 9 || a.reihe === 10;
+  if (isFloor) el.style.zIndex = '7';
+  el.style.setProperty('--bh', `${-3 - Math.random() * 5}px`);
+  const anim = isFloor ? 'animal-crawl' : 'animal-swim';
+  if (entering) {
+    el.style.animation = `animal-swim-in 0.58s cubic-bezier(0.175,0.885,0.32,1.275) forwards`;
+    setTimeout(() => {
+      if (el.isConnected)
+        el.style.animation = `${anim} ${a.dur}s ease-in-out -${a.delay}s infinite`;
+    }, 600);
+  } else {
+    el.style.animation = `${anim} ${a.dur}s ease-in-out -${a.delay}s infinite`;
+  }
+  return el;
+}
+
+// ── Spielaktionen ─────────────────────────────────────
+function selectReihe(n) {
+  state.reihe = n;
+  renderReihenSelector(); renderInfoCard(); renderProgress(); nextQuestion();
+}
+
+function addAnimal(reihe) {
+  const isFloor = reihe === 8 || reihe === 9 || reihe === 10;
+  state.aquarium.push({
+    emoji: TIERE[reihe].emoji, reihe,
+    x:    4 + Math.random() * 84,
+    y:    isFloor ? 70 + Math.random() * 8   // Boden: 70–78%
+                  : 4 + Math.random() * 56,  // Freiwasser: oben
+    size: 1.5 + Math.random() * 0.9,
+    dur:  isFloor ? 4 + Math.random() * 3    // Krabbler: eher langsam
+                  : 3.5 + Math.random() * 3,
+    delay: Math.random() * 4,
+    sw:   isFloor ? 10 + Math.random() * 18  // kleine Schritte am Boden
+                  : 14 + Math.random() * 32,
+    floor: isFloor,
+  });
+  saveState(); renderAquarium(true); renderInfoCard();
+}
+
+function triggerCompletion() {
+  state.completed.add(state.reihe); saveState(); renderReihenSelector();
+  const t = TIERE[state.reihe];
+  const cnt = state.aquarium.filter(a => a.reihe===state.reihe).length;
+  document.getElementById('cel-emoji').textContent = t.emoji;
+  document.getElementById('cel-title').textContent = `${state.reihe}er-Reihe geschafft!`;
+  document.getElementById('cel-text').textContent =
+    `Fantastisch! Du hast alle 10 Aufgaben gelöst und ${cnt} ${t.emoji} ins Aquarium geholt!`;
+  document.getElementById('overlay').classList.remove('hidden');
+  spawnConfetti();
+}
+
+function closeCelebration() {
+  document.getElementById('overlay').classList.add('hidden');
+  state.progress[state.reihe] = new Set();
+  nextQuestion();
+}
+
+// ── Reset ─────────────────────────────────────────────
+function showResetDialog() {
+  document.getElementById('reset-overlay').classList.remove('hidden');
+}
+function hideResetDialog() {
+  document.getElementById('reset-overlay').classList.add('hidden');
+}
+function resetGame() {
+  localStorage.removeItem(STORAGE_KEY);
+  state.aquarium  = [];
+  state.completed = new Set();
+  for (let i = 1; i <= 10; i++) state.progress[i] = new Set();
+  hideResetDialog();
+  renderAquarium();
+  renderReihenSelector();
+  renderInfoCard();
+  selectReihe(2);
+}
+
+// ── Vollbild ──────────────────────────────────────────
+function toggleFullscreen() {
+  const el = document.documentElement;
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!isFS) {
+    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
+}
+function syncFsIcon() {
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+  document.getElementById('icon-expand').style.display   = isFS ? 'none'  : 'block';
+  document.getElementById('icon-compress').style.display = isFS ? 'block' : 'none';
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(e =>
+  document.addEventListener(e, syncFsIcon));
+
+// ── Effekte ───────────────────────────────────────────
+function initBubbles() {
+  const box = document.getElementById('aquarium-box');
+  for (let i = 0; i < 14; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const sz = 5+Math.random()*13, drift=(Math.random()-0.5)*30;
+    b.style.cssText = `
+      width:${sz}px;height:${sz}px;
+      left:${4+Math.random()*92}%;bottom:${6+Math.random()*40}%;
+      animation-duration:${3+Math.random()*4}s;
+      animation-delay:-${Math.random()*7}s;--drift:${drift}px;`;
+    box.appendChild(b);
+  }
+}
+
+function spawnConfetti() {
+  const cols=['#ff7675','#a29bfe','#fdcb6e','#55efc4','#74b9ff','#fd79a8','#00cec9','#f9ca24'];
+  for (let i=0;i<75;i++) {
+    const el=document.createElement('div'), sz=7+Math.random()*9;
+    el.className='confetti-p';
+    el.style.cssText=`left:${Math.random()*100}vw;top:-14px;
+      width:${sz}px;height:${sz}px;
+      border-radius:${Math.random()>0.45?'50%':'3px'};
+      background:${cols[Math.floor(Math.random()*cols.length)]};
+      animation-duration:${1.1+Math.random()*1.5}s;
+      animation-delay:${Math.random()*0.5}s;
+      --rot:${Math.random()*1080-540}deg;`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3800);
+  }
+}
+
+// ── Init ──────────────────────────────────────────────
+document.getElementById('fs-btn').addEventListener('click', toggleFullscreen);
+document.getElementById('cel-btn').addEventListener('click', closeCelebration);
+document.getElementById('reset-btn').addEventListener('click', showResetDialog);
+document.getElementById('reset-cancel').addEventListener('click', hideResetDialog);
+document.getElementById('reset-confirm').addEventListener('click', resetGame);
+document.getElementById('answer-submit').addEventListener('click', submitAnswer);
+document.getElementById('answer-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitAnswer();
+});
+
+let lastTap = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTap < 290) e.preventDefault();
+  lastTap = now;
+}, { passive: false });
+
+window.addEventListener('load', () => {
+  loadState(); initBubbles(); renderAquarium(); renderReihenSelector(); selectReihe(2);
+});
+</script>
+</body>
+</html>
