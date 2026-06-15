@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Morgenfit für den Lerncheck</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --blau:#3D7DCA;        /* Aufgaben / Buttons */
+    --blau-dark:#2C5E9E;
+    --blau-pale:#E4F0FB;
+    --gruen:#3FA64E;       /* Richtig */
+    --gruen-pale:#E2F5E4;
+    --orange:#E8842B;      /* Tipps */
+    --orange-pale:#FCEEDD;
+    --lila:#7E57C2;        /* Akzent Stationspunkte */
+    --gelb:#FFD23F;        /* Sterne / Highlights */
+    --bg:#FFF9F0;          /* Creme */
+    --weiss:#FFFFFF;
+    --text:#243240;
+    --muted:#5C6B7A;
+    --border:#E3DAC9;
+    --schatten:0 6px 18px rgba(60,86,104,0.12);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:18px;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+    overflow-x:hidden;
+  }
+  :focus-visible{outline:3px solid var(--blau);outline-offset:3px;border-radius:8px;}
+
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100%;
+    min-height:100dvh;
+    padding:16px 16px calc(24px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* Fortschrittspunkte oben */
+  .progress{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    padding:8px 0 18px;
+  }
+  .dot{
+    width:14px;height:14px;border-radius:50%;
+    background:#D9D2C4;
+    transition:background .3s, transform .3s;
+  }
+  .dot.active{background:var(--lila);transform:scale(1.25);}
+  .dot.done{background:var(--gruen);}
+
+  .screen{flex:1;display:flex;flex-direction:column;}
+  .hidden{display:none !important;}
+
+  .card{
+    background:var(--weiss);
+    border-radius:24px;
+    box-shadow:var(--schatten);
+    padding:26px 22px;
+    margin-bottom:16px;
+  }
+
+  h1{font-size:30px;line-height:1.15;font-weight:800;margin-bottom:10px;}
+  h2{font-size:23px;font-weight:800;margin-bottom:6px;}
+  .station-label{
+    display:inline-block;
+    background:var(--blau-pale);
+    color:var(--blau-dark);
+    font-weight:700;
+    font-size:14px;
+    padding:5px 14px;
+    border-radius:999px;
+    margin-bottom:14px;
+  }
+  .lead{font-size:18px;color:var(--muted);margin-bottom:8px;}
+  .merksatz{
+    background:var(--orange-pale);
+    border-left:6px solid var(--orange);
+    border-radius:0 14px 14px 0;
+    padding:12px 16px;
+    font-size:16px;
+    margin:16px 0;
+  }
+  .merksatz strong{color:#9E5410;}
+
+  .aufgabe{
+    font-size:38px;
+    font-weight:800;
+    text-align:center;
+    color:var(--blau-dark);
+    letter-spacing:1px;
+    margin:6px 0 18px;
+  }
+
+  /* Eingabe-Zeilen */
+  .eingabe-zeile{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    font-size:26px;
+    font-weight:700;
+    margin:12px 0;
+    flex-wrap:wrap;
+  }
+  input[type="text"]{
+    font-size:16px;            /* kein iOS-Zoom */
+    width:74px;
+    padding:12px 8px;
+    text-align:center;
+    border:3px solid var(--border);
+    border-radius:14px;
+    font-weight:800;
+    color:var(--blau-dark);
+    background:#fff;
+  }
+  input.gross{font-size:16px;width:100px;}
+  input.ok{border-color:var(--gruen);background:var(--gruen-pale);}
+  input.fehler{border-color:var(--orange);background:var(--orange-pale);}
+
+  .schritt{
+    display:flex;align-items:center;gap:10px;
+    background:var(--blau-pale);
+    border-radius:16px;
+    padding:12px 16px;
+    margin:10px 0;
+    font-size:20px;font-weight:700;
+    opacity:.55;
+    transition:opacity .3s;
+  }
+  .schritt.fertig{opacity:1;background:var(--gruen-pale);}
+  .haken{
+    width:30px;height:30px;flex:0 0 30px;border-radius:50%;
+    background:#CFE8D2;color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;font-weight:900;
+    transform:scale(0);
+  }
+  .schritt.fertig .haken{background:var(--gruen);}
+
+  /* Buttons */
+  .btn{
+    display:block;width:100%;
+    border:none;border-radius:18px;
+    padding:18px;
+    font-size:21px;font-weight:800;
+    color:#fff;background:var(--blau);
+    cursor:pointer;
+    min-height:60px;
+    box-shadow:0 4px 0 var(--blau-dark);
+    transition:transform .08s, box-shadow .08s, background .2s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--blau-dark);}
+  .btn.gruen{background:var(--gruen);box-shadow:0 4px 0 #2E7D3A;}
+  .btn.gruen:active{box-shadow:0 0 0 #2E7D3A;}
+  .btn.gross{font-size:24px;padding:22px;}
+  .btn:disabled{opacity:.45;cursor:default;box-shadow:none;transform:none;}
+
+  .btn-pruefen{margin-top:8px;}
+
+  /* Auswahl-Buttons (Trick / Rechnung) */
+  .wahl{
+    display:flex;flex-direction:column;gap:12px;margin:14px 0 4px;
+  }
+  .wahl-btn{
+    border:3px solid var(--border);
+    background:#fff;
+    border-radius:18px;
+    padding:18px;
+    font-size:22px;font-weight:800;
+    color:var(--blau-dark);
+    cursor:pointer;text-align:center;
+    min-height:60px;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .08s, border-color .2s, background .2s;
+  }
+  .wahl-btn:active{transform:scale(.97);}
+  .wahl-btn.richtig{border-color:var(--gruen);background:var(--gruen-pale);color:#1F6B2C;}
+  .wahl-btn.daneben{border-color:var(--orange);background:var(--orange-pale);color:#9E5410;}
+
+  /* Rechenstrich */
+  .strich-box{
+    background:var(--blau-pale);
+    border-radius:18px;
+    padding:24px 14px 16px;
+    margin:12px 0;
+    position:relative;
+  }
+  svg{width:100%;height:120px;display:block;overflow:visible;}
+  .sprung-label{font-size:16px;font-weight:800;fill:var(--lila);}
+  .zahl-label{font-size:15px;font-weight:800;fill:var(--blau-dark);}
+
+  .feedback{
+    border-radius:14px;
+    padding:12px 16px;
+    font-size:17px;font-weight:600;
+    margin-top:14px;
+    display:flex;gap:10px;align-items:flex-start;
+  }
+  .feedback.gut{background:var(--gruen-pale);color:#1F6B2C;}
+  .feedback.tipp{background:var(--orange-pale);color:#9E5410;}
+  .feedback .ic{font-size:22px;flex:0 0 auto;line-height:1.2;}
+
+  .frage-klein{font-size:18px;font-weight:700;margin:14px 0 6px;}
+
+  /* Abschluss */
+  .liste-koennen{list-style:none;margin:14px 0;}
+  .liste-koennen li{
+    display:flex;align-items:center;gap:12px;
+    background:var(--gruen-pale);
+    border-radius:14px;
+    padding:13px 16px;
+    margin-bottom:10px;
+    font-size:17px;font-weight:700;color:#1F6B2C;
+    opacity:0;transform:translateX(-16px);
+  }
+  .liste-koennen li .ic{font-size:22px;}
+  .schluss{
+    text-align:center;font-size:21px;font-weight:800;
+    color:var(--blau-dark);margin:18px 0 6px;
+  }
+  .emoji-gross{font-size:64px;text-align:center;margin:6px 0;}
+
+  .mini-link{
+    background:none;border:none;color:var(--muted);
+    font-size:15px;text-decoration:underline;cursor:pointer;
+    display:block;margin:8px auto 0;padding:8px;
+  }
+  .resume-hinweis{
+    background:var(--orange-pale);
+    border-radius:14px;padding:12px 16px;
+    font-size:15px;color:#9E5410;font-weight:600;
+    margin-bottom:14px;text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <div class="screen" id="screen"></div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- Speicher ---------------- */
+const KEY = "morgenfit_fortschritt_v1";
+function save(state){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){ return null; } }
+function clearSave(){ try{ localStorage.removeItem(KEY); }catch(e){} }
+
+/* ---------------- Daten (feste Aufgaben) ---------------- */
+// Stationen: 0 = Start, 1..4 = Stationen, 5 = Ende
+const STATIONEN = [
+  { titel:"Zehner und Einer trennen", icon:"🔟" },
+  { titel:"Am Rechenstrich springen", icon:"➡️" },
+  { titel:"Den Zehnertrick nutzen",   icon:"⚡" },
+  { titel:"Sachaufgabe lösen",        icon:"🌷" },
+];
+
+/* Zustand */
+let state = load() || { schritt: 0, erledigt: [false,false,false,false] };
+
+const screen = document.getElementById("screen");
+const progressEl = document.getElementById("progress");
+
+/* ---------------- Fortschrittspunkte ---------------- */
+function renderProgress(){
+  progressEl.innerHTML = "";
+  // 4 Punkte für 4 Stationen
+  for(let i=0;i<4;i++){
+    const d=document.createElement("div");
+    d.className="dot";
+    if(state.erledigt[i]) d.classList.add("done");
+    if(state.schritt-1===i && !state.erledigt[i]) d.classList.add("active");
+    progressEl.appendChild(d);
+  }
+  progressEl.style.display = (state.schritt>=1 && state.schritt<=4) ? "flex" : "none";
+}
+
+/* ---------------- Hilfen ---------------- */
+function el(html){ const t=document.createElement("template"); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+function leinblenden(node){
+  gsap.fromTo(node, {y:40, opacity:0}, {y:0, opacity:1, duration:.5, ease:"power2.out"});
+}
+function gehZu(schritt){
+  state.schritt = schritt;
+  save(state);
+  render();
+}
+
+/* ---------------- Render-Router ---------------- */
+function render(){
+  renderProgress();
+  screen.innerHTML = "";
+  if(state.schritt===0) renderStart();
+  else if(state.schritt===1) renderStation1();
+  else if(state.schritt===2) renderStation2();
+  else if(state.schritt===3) renderStation3();
+  else if(state.schritt===4) renderStation4();
+  else renderEnde();
+}
+
+/* ===================================================== */
+/* START                                                 */
+/* ===================================================== */
+function renderStart(){
+  const fortschrittDa = state.erledigt.some(x=>x);
+  const card = el(`
+    <div class="card" style="text-align:center;">
+      <div class="emoji-gross">🌅</div>
+      <h1>Morgenfit für den Lerncheck</h1>
+      <p class="lead">Heute wiederholst du nur die wichtigsten Rechenwege.</p>
+      <p class="lead" style="margin-bottom:20px;">Rechne langsam. Schreibe sauber. Erkläre deinen Weg.</p>
+      ${fortschrittDa ? `<div class="resume-hinweis">Du hast schon angefangen. Du kannst weitermachen.</div>` : ``}
+      <button class="btn gross" id="los">Los geht's</button>
+      ${fortschrittDa ? `<button class="mini-link" id="neustart">Von vorne beginnen</button>` : ``}
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+  document.getElementById("los").onclick = ()=>{
+    // zur ersten noch nicht erledigten Station, sonst Station 1
+    const next = state.erledigt.findIndex(x=>!x);
+    gehZu(next===-1 ? 5 : next+1);
+  };
+  const nb=document.getElementById("neustart");
+  if(nb) nb.onclick=()=>{ state={schritt:0,erledigt:[false,false,false,false]}; clearSave(); render(); };
+}
+
+/* gemeinsamer Stations-Kopf */
+function stationKopf(nr){
+  const s=STATIONEN[nr-1];
+  return `<span class="station-label">Station ${nr} von 4 · ${s.icon} ${s.titel}</span>`;
+}
+function weiterButton(label){
+  return `<button class="btn gruen btn-weiter hidden" id="weiter">${label||"Weiter ➜"}</button>`;
+}
+function aktiviereWeiter(zielSchritt, markiereStation){
+  const w=document.getElementById("weiter");
+  w.classList.remove("hidden");
+  gsap.fromTo(w,{scale:.8,opacity:0},{scale:1,opacity:1,duration:.4,ease:"back.out(1.7)"});
+  w.onclick=()=>{
+    if(markiereStation!=null){ state.erledigt[markiereStation]=true; save(state); }
+    gehZu(zielSchritt);
+  };
+}
+function zeigeFeedback(container, typ, text){
+  const alt=container.querySelector(".feedback");
+  if(alt) alt.remove();
+  const ic = typ==="gut" ? "✅" : "💡";
+  const fb=el(`<div class="feedback ${typ}"><span class="ic" aria-hidden="true">${ic}</span><span>${text}</span></div>`);
+  fb.setAttribute("role","status");
+  container.appendChild(fb);
+  gsap.fromTo(fb,{opacity:0,y:8},{opacity:1,y:0,duration:.3});
+}
+
+/* ===================================================== */
+/* STATION 1 — Zehner und Einer trennen   37 + 25        */
+/* ===================================================== */
+// Aufgaben für Station 1 (a+b, beide ohne Hunderterübergang, mit Zehnerübergang bei Einern)
+const ST1_AUFGABEN=[
+  {a:37,b:25}, // Z:50  E:12  -> 62
+  {a:46,b:38}, // Z:70  E:14  -> 84
+];
+function z(n){return Math.floor(n/10)*10;}   // Zehnerteil
+function e(n){return n%10;}                   // Einerteil
+
+function renderStation1(){
+  let idx=0;
+  const card = el(`
+    <div class="card">
+      ${stationKopf(1)}
+      <h2>Zehner und Einer trennen</h2>
+      <div class="aufgabe" id="s1-aufgabe"></div>
+      <div id="s1-zeilen"></div>
+      <div class="merksatz"><strong>Merke:</strong> Ich rechne erst die Zehner, dann die Einer. Danach rechne ich alles zusammen.</div>
+      <button class="btn btn-pruefen" id="pruefen">Prüfen</button>
+      <button class="btn btn-pruefen hidden" id="naechste">Nächste Aufgabe ➜</button>
+      ${weiterButton("Weiter zu Station 2 ➜")}
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+
+  const aufgabeEl=card.querySelector("#s1-aufgabe");
+  const zeilenEl=card.querySelector("#s1-zeilen");
+  const pruefBtn=card.querySelector("#pruefen");
+  const naechsteBtn=card.querySelector("#naechste");
+
+  function ladeAufgabe(){
+    const {a,b}=ST1_AUFGABEN[idx];
+    aufgabeEl.textContent=`${a} + ${b}`;
+    // Zeile 3 zeigt KEINE fertigen Zahlen, sondern leere Felder, die aus Zeile 1 & 2 gefüllt werden
+    zeilenEl.innerHTML=`
+      <div class="schritt" id="s1"><span class="haken">✓</span>
+        <span>${z(a)} + ${z(b)} = <input type="text" inputmode="numeric" id="i1" aria-label="Zehner zusammen"></span>
+      </div>
+      <div class="schritt" id="s2"><span class="haken">✓</span>
+        <span>${e(a)} + ${e(b)} = <input type="text" inputmode="numeric" id="i2" aria-label="Einer zusammen"></span>
+      </div>
+      <div class="schritt" id="s3"><span class="haken">✓</span>
+        <span><input type="text" inputmode="numeric" id="i3a" aria-label="Zehnerergebnis"> + <input type="text" inputmode="numeric" id="i3b" aria-label="Einerergebnis"> = <input type="text" inputmode="numeric" id="i3" aria-label="Alles zusammen"></span>
+      </div>`;
+    pruefBtn.disabled=false; pruefBtn.classList.remove("hidden");
+    naechsteBtn.classList.add("hidden");
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+  }
+
+  pruefBtn.onclick=()=>{
+    const {a,b}=ST1_AUFGABEN[idx];
+    const zSum=z(a)+z(b), eSum=e(a)+e(b), gesamt=a+b;
+    const i1=card.querySelector("#i1"), i2=card.querySelector("#i2");
+    const i3a=card.querySelector("#i3a"), i3b=card.querySelector("#i3b"), i3=card.querySelector("#i3");
+
+    const v=(inp)=>parseInt(inp.value,10);
+    const ok1=v(i1)===zSum, ok2=v(i2)===eSum;
+    // Zeile 3: die Übertragung der Vorrechnungen muss stimmen + Summe
+    const ok3a=v(i3a)===zSum, ok3b=v(i3b)===eSum, ok3=v(i3)===gesamt;
+
+    [[i1,ok1],[i2,ok2],[i3a,ok3a],[i3b,ok3b],[i3,ok3]].forEach(([inp,ok])=>{
+      inp.classList.toggle("ok",ok); inp.classList.toggle("fehler",!ok);
+    });
+    // Häkchen pro Zeile
+    [["s1",ok1],["s2",ok2],["s3",ok3a&&ok3b&&ok3]].forEach(([sid,ok],i)=>{
+      const sr=card.querySelector("#"+sid);
+      if(ok && !sr.classList.contains("fertig")){
+        sr.classList.add("fertig");
+        gsap.fromTo(sr.querySelector(".haken"),{scale:0},{scale:1,duration:.4,delay:i*0.1,ease:"back.out(2)"});
+      } else if(!ok){ sr.classList.remove("fertig"); }
+    });
+
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+    if(ok1&&ok2&&ok3a&&ok3b&&ok3){
+      pruefBtn.disabled=true;
+      if(idx<ST1_AUFGABEN.length-1){
+        zeigeFeedback(card,"gut","Stark! Jetzt noch eine Aufgabe zum Festigen.");
+        pruefBtn.classList.add("hidden");
+        naechsteBtn.classList.remove("hidden");
+        gsap.fromTo(naechsteBtn,{scale:.8,opacity:0},{scale:1,opacity:1,duration:.35,ease:"back.out(1.7)"});
+      } else {
+        zeigeFeedback(card,"gut","Super! Erst Zehner, dann Einer, dann alles zusammen.");
+        pruefBtn.classList.add("hidden");
+        aktiviereWeiter(2,0);
+      }
+    } else {
+      let tipp="Schau zuerst auf die Zehner.";
+      if(ok1&&!ok2) tipp="Schau auf die Einer.";
+      if(ok1&&ok2&&(!ok3a||!ok3b)) tipp="Trag in die letzte Zeile deine beiden Ergebnisse von oben ein.";
+      else if(ok1&&ok2&&ok3a&&ok3b&&!ok3) tipp="Jetzt deine Zehner und Einer zusammenrechnen.";
+      zeigeFeedback(card,"tipp",tipp);
+    }
+  };
+
+  naechsteBtn.onclick=()=>{ idx++; ladeAufgabe(); gsap.fromTo(zeilenEl,{opacity:0,y:10},{opacity:1,y:0,duration:.35}); };
+
+  ladeAufgabe();
+}
+
+/* ===================================================== */
+/* STATION 2 — Rechenstrich   26 + 37                    */
+/* ===================================================== */
+// Station 2 Aufgaben: a + b, b in zwei Sprüngen (Zehner, Einer)
+const ST2_AUFGABEN=[
+  {a:26,b:37}, // +30 ->56, +7 ->63
+  {a:48,b:25}, // +20 ->68, +5 ->73
+];
+function renderStation2(){
+  let idx=0;
+  const card = el(`
+    <div class="card">
+      ${stationKopf(2)}
+      <h2>Am Rechenstrich springen</h2>
+      <div class="aufgabe" id="s2-aufgabe"></div>
+      <p class="lead" style="font-size:16px;" id="s2-hinweis"></p>
+      <div class="strich-box">
+        <svg viewBox="0 0 320 120" role="img" id="s2-svg" aria-label="Zahlenstrahl mit zwei Sprüngen">
+          <line x1="20" y1="90" x2="300" y2="90" stroke="#9DBCE0" stroke-width="3"/>
+          <circle cx="30" cy="90" r="6" fill="#2C5E9E"/>
+          <text class="zahl-label" x="30" y="112" text-anchor="middle" id="t-start"></text>
+          <circle cx="180" cy="90" r="6" fill="#9DBCE0" id="p-mitte"/>
+          <text class="zahl-label" x="180" y="112" text-anchor="middle" id="t-mitte" opacity="0"></text>
+          <circle cx="290" cy="90" r="6" fill="#9DBCE0" id="p-ende"/>
+          <text class="zahl-label" x="290" y="112" text-anchor="middle" id="t-ende" opacity="0"></text>
+          <path id="bogen1" d="M30,90 Q105,30 180,90" fill="none" stroke="#7E57C2" stroke-width="3" stroke-dasharray="320" stroke-dashoffset="320"/>
+          <text class="sprung-label" x="105" y="40" text-anchor="middle" id="lbl1" opacity="0"></text>
+          <path id="bogen2" d="M180,90 Q235,45 290,90" fill="none" stroke="#7E57C2" stroke-width="3" stroke-dasharray="220" stroke-dashoffset="220"/>
+          <text class="sprung-label" x="235" y="52" text-anchor="middle" id="lbl2" opacity="0"></text>
+          <circle id="laeufer" cx="30" cy="90" r="9" fill="#E8842B"/>
+        </svg>
+      </div>
+
+      <button class="btn" id="animieren">▶ Sprünge zeigen</button>
+
+      <div class="frage-klein" id="frage-zwischen"></div>
+      <div class="eingabe-zeile" id="zeile-zwischen"></div>
+
+      <div class="frage-klein">Und wo bist du am Ende?</div>
+      <div class="eingabe-zeile" id="zeile-ende"></div>
+
+      <div class="merksatz"><strong>Merke:</strong> Ich starte bei der ersten Zahl. Dann springe ich erst die Zehner, dann die Einer.</div>
+
+      <button class="btn btn-pruefen" id="pruefen">Prüfen</button>
+      <button class="btn btn-pruefen hidden" id="naechste">Nächste Aufgabe ➜</button>
+      ${weiterButton("Weiter zu Station 3 ➜")}
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+
+  const pruefBtn=card.querySelector("#pruefen");
+  const naechsteBtn=card.querySelector("#naechste");
+
+  function ladeAufgabe(){
+    const {a,b}=ST2_AUFGABEN[idx];
+    const zehner=z(b), einer=e(b), mitte=a+zehner, ende=a+b;
+    card.querySelector("#s2-aufgabe").textContent=`${a} + ${b}`;
+    card.querySelector("#s2-hinweis").textContent=`Du springst erst die Zehner (+${zehner}), dann die Einer (+${einer}).`;
+    card.querySelector("#t-start").textContent=a;
+    card.querySelector("#t-mitte").textContent=mitte;
+    card.querySelector("#t-ende").textContent=ende;
+    card.querySelector("#lbl1").textContent=`+${zehner}`;
+    card.querySelector("#lbl2").textContent=`+${einer}`;
+    card.querySelector("#frage-zwischen").textContent=`Wo landest du nach dem ersten Sprung (+${zehner})?`;
+    card.querySelector("#zeile-zwischen").innerHTML=`${a} + ${zehner} = <input type="text" inputmode="numeric" id="zwischen" aria-label="Zwischenzahl">`;
+    card.querySelector("#zeile-ende").innerHTML=`${a} + ${b} = <input type="text" inputmode="numeric" id="endzahl" aria-label="Endergebnis">`;
+    // reset svg
+    gsap.set("#laeufer",{attr:{cx:30,cy:90}});
+    gsap.set(["#lbl1","#lbl2","#t-mitte","#t-ende"],{opacity:0});
+    gsap.set("#bogen1",{strokeDashoffset:320}); gsap.set("#bogen2",{strokeDashoffset:220});
+    gsap.set(["#p-mitte","#p-ende"],{attr:{fill:"#9DBCE0"}});
+    pruefBtn.disabled=false; pruefBtn.classList.remove("hidden");
+    naechsteBtn.classList.add("hidden");
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+  }
+
+  function animiereStrich(){
+    const laeufer=card.querySelector("#laeufer");
+    gsap.set(laeufer,{attr:{cx:30,cy:90}});
+    gsap.set("#bogen1",{strokeDashoffset:320}); gsap.set("#bogen2",{strokeDashoffset:220});
+    gsap.set(["#lbl1","#lbl2","#t-mitte","#t-ende"],{opacity:0});
+    gsap.set(["#p-mitte","#p-ende"],{attr:{fill:"#9DBCE0"}});
+    const tl=gsap.timeline();
+    tl.to("#lbl1",{opacity:1,duration:.2})
+      .to("#bogen1",{strokeDashoffset:0,duration:.6,ease:"power1.inOut"},"<")
+      .to(laeufer,{attr:{cx:180},duration:.6,ease:"power1.inOut",
+            onUpdate:function(){const p=this.progress();laeufer.setAttribute("cy",90-Math.sin(p*Math.PI)*55);}},"<")
+      .set("#p-mitte",{attr:{fill:"#2C5E9E"}})
+      .to("#t-mitte",{opacity:1,duration:.3})
+      .to("#lbl2",{opacity:1,duration:.2},"+=.2")
+      .to("#bogen2",{strokeDashoffset:0,duration:.5,ease:"power1.inOut"},"<")
+      .to(laeufer,{attr:{cx:290},duration:.5,ease:"power1.inOut",
+            onUpdate:function(){const p=this.progress();laeufer.setAttribute("cy",90-Math.sin(p*Math.PI)*40);}},"<")
+      .set("#p-ende",{attr:{fill:"#3FA64E"}})
+      .to("#t-ende",{opacity:1,duration:.3});
+  }
+  card.querySelector("#animieren").onclick=animiereStrich;
+
+  pruefBtn.onclick=()=>{
+    const {a,b}=ST2_AUFGABEN[idx];
+    const mitte=a+z(b), ende=a+b;
+    const iz=card.querySelector("#zwischen"), ie=card.querySelector("#endzahl");
+    const okZ=parseInt(iz.value,10)===mitte, okE=parseInt(ie.value,10)===ende;
+    iz.classList.toggle("ok",okZ); iz.classList.toggle("fehler",!okZ);
+    ie.classList.toggle("ok",okE); ie.classList.toggle("fehler",!okE);
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+    if(okZ&&okE){
+      pruefBtn.disabled=true;
+      if(idx<ST2_AUFGABEN.length-1){
+        zeigeFeedback(card,"gut",`Genau! Erst ${mitte}, dann ${ende}. Jetzt noch eine Aufgabe.`);
+        pruefBtn.classList.add("hidden");
+        naechsteBtn.classList.remove("hidden");
+        gsap.fromTo(naechsteBtn,{scale:.8,opacity:0},{scale:1,opacity:1,duration:.35,ease:"back.out(1.7)"});
+      } else {
+        zeigeFeedback(card,"gut",`Stark! Erst die Zehner, dann die Einer.`);
+        pruefBtn.classList.add("hidden");
+        aktiviereWeiter(3,1);
+      }
+    } else if(!okZ){
+      zeigeFeedback(card,"tipp",`Rechne ${a} + ${z(b)}. Springe nur die Zehner.`);
+    } else {
+      zeigeFeedback(card,"tipp",`Du bist bei ${mitte}. Jetzt noch +${e(b)} dazu.`);
+    }
+  };
+
+  naechsteBtn.onclick=()=>{ idx++; ladeAufgabe(); gsap.fromTo(card.querySelector("#s2-aufgabe"),{opacity:0,y:10},{opacity:1,y:0,duration:.35}); };
+
+  ladeAufgabe();
+}
+
+/* ===================================================== */
+/* STATION 3 — Zehnertrick   34 + 29                     */
+/* ===================================================== */
+// Station 3 Aufgaben: a + b mit b auf 9 endend -> +(b+1) und -1
+const ST3_AUFGABEN=[
+  {a:34,b:29}, // +30 -1 -> 63
+  {a:56,b:19}, // +20 -1 -> 75
+];
+function renderStation3(){
+  let idx=0;
+  const card = el(`
+    <div class="card">
+      ${stationKopf(3)}
+      <h2>Den Zehnertrick nutzen</h2>
+      <div class="aufgabe" id="s3-aufgabe"></div>
+      <p class="lead" style="font-size:16px;">Welcher Weg ist leichter?</p>
+
+      <div class="wahl" id="s3-wahl"></div>
+
+      <div class="strich-box hidden" id="trick-box">
+        <svg viewBox="0 0 320 120" role="img" id="s3-svg" aria-label="Zehnertrick am Zahlenstrahl">
+          <line x1="20" y1="90" x2="300" y2="90" stroke="#9DBCE0" stroke-width="3"/>
+          <circle cx="30" cy="90" r="6" fill="#2C5E9E"/>
+          <text class="zahl-label" x="30" y="112" text-anchor="middle" id="t3-start"></text>
+          <circle cx="290" cy="90" r="6" fill="#9DBCE0" id="t3-weit"/>
+          <text class="zahl-label" x="290" y="112" text-anchor="middle" id="t3-weit-lbl" opacity="0"></text>
+          <circle cx="262" cy="90" r="6" fill="#9DBCE0" id="t3-ziel"/>
+          <text class="zahl-label" x="262" y="74" text-anchor="middle" id="t3-ziel-lbl" opacity="0"></text>
+          <text class="sprung-label" x="160" y="34" text-anchor="middle" id="t3-l1" opacity="0"></text>
+          <text class="sprung-label" x="282" y="120" text-anchor="middle" id="t3-l2" opacity="0">−1</text>
+          <circle id="t3-laeufer" cx="30" cy="90" r="9" fill="#E8842B"/>
+        </svg>
+      </div>
+
+      <div class="hidden" id="s3-ergebnis-box">
+        <div class="frage-klein" id="s3-frage-erg"></div>
+        <div class="eingabe-zeile" id="s3-zeile-erg"></div>
+        <button class="btn btn-pruefen" id="s3-pruefen">Prüfen</button>
+      </div>
+
+      <div class="merksatz">
+        <strong>Trick-Karten:</strong><br>
+        +19 = +20 − 1<br>
+        +29 = +30 − 1<br>
+        +39 = +40 − 1
+      </div>
+
+      <button class="btn btn-pruefen hidden" id="naechste">Nächste Aufgabe ➜</button>
+      ${weiterButton("Weiter zu Station 4 ➜")}
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+
+  const wahlEl=card.querySelector("#s3-wahl");
+  const naechsteBtn=card.querySelector("#naechste");
+
+  function ladeAufgabe(){
+    const {a,b}=ST3_AUFGABEN[idx];
+    const auf=b+1; // z.B. 30
+    card.querySelector("#s3-aufgabe").textContent=`${a} + ${b}`;
+    wahlEl.innerHTML=`
+      <button class="wahl-btn" data-ok="false">einfach + ${b}</button>
+      <button class="wahl-btn" data-ok="true">+ ${auf} und dann − 1</button>`;
+    card.querySelector("#t3-start").textContent=a;
+    card.querySelector("#t3-weit-lbl").textContent=a+auf;
+    card.querySelector("#t3-ziel-lbl").textContent=a+b;
+    card.querySelector("#t3-l1").textContent=`+${auf}`;
+    card.querySelector("#s3-frage-erg").textContent=`Und wie viel ist ${a} + ${b}?`;
+    card.querySelector("#s3-zeile-erg").innerHTML=`${a} + ${b} = <input type="text" inputmode="numeric" id="s3-erg" aria-label="Ergebnis">`;
+    card.querySelector("#trick-box").classList.add("hidden");
+    card.querySelector("#s3-ergebnis-box").classList.add("hidden");
+    const pruefBtn = card.querySelector("#s3-pruefen");
+    pruefBtn.disabled = false;
+    pruefBtn.classList.remove("hidden");
+    naechsteBtn.classList.add("hidden");
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+    bindeWahl();
+  }
+
+  function bindeWahl(){
+    const btns=wahlEl.querySelectorAll(".wahl-btn");
+    btns.forEach(b=>{
+      b.onclick=()=>{
+        const {a,b:bb}=ST3_AUFGABEN[idx];
+        const ok=b.dataset.ok==="true";
+        btns.forEach(x=>x.disabled=true);
+        const richtige=[...btns].find(x=>x.dataset.ok==="true");
+        if(ok){ b.classList.add("richtig"); }
+        else { b.classList.add("daneben"); richtige.classList.add("richtig"); }
+        card.querySelector("#trick-box").classList.remove("hidden");
+        animiereTrick();
+        const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+        zeigeFeedback(card,"gut",`Schau: erst +${bb+1} (einen zu weit), dann 1 zurück.`);
+        const eb=card.querySelector("#s3-ergebnis-box");
+        eb.classList.remove("hidden");
+        gsap.fromTo(eb,{opacity:0,y:10},{opacity:1,y:0,duration:.4});
+      };
+    });
+  }
+
+  card.querySelector("#s3-pruefen").onclick=()=>{
+    const {a,b}=ST3_AUFGABEN[idx];
+    const inp=card.querySelector("#s3-erg");
+    const ok=parseInt(inp.value,10)===a+b;
+    inp.classList.toggle("ok",ok); inp.classList.toggle("fehler",!ok);
+    const alt=card.querySelector(".feedback"); if(alt) alt.remove();
+    if(ok){
+      card.querySelector("#s3-pruefen").disabled=true;
+      if(idx<ST3_AUFGABEN.length-1){
+        zeigeFeedback(card,"gut","Richtig! Jetzt noch eine Aufgabe zum Festigen.");
+        naechsteBtn.classList.remove("hidden");
+        gsap.fromTo(naechsteBtn,{scale:.8,opacity:0},{scale:1,opacity:1,duration:.35,ease:"back.out(1.7)"});
+      } else {
+        zeigeFeedback(card,"gut","Stark! Den Zehnertrick beherrschst du.");
+        aktiviereWeiter(4,2);
+      }
+    } else {
+      zeigeFeedback(card,"tipp",`Rechne ${a} + ${b+1} und gehe dann 1 zurück.`);
+    }
+  };
+
+  function animiereTrick(){
+    const l=card.querySelector("#t3-laeufer");
+    gsap.set(l,{attr:{cx:30,cy:90}});
+    gsap.set(["#t3-l1","#t3-l2","#t3-weit-lbl","#t3-ziel-lbl"],{opacity:0});
+    gsap.set(["#t3-weit","#t3-ziel"],{attr:{fill:"#9DBCE0"}});
+    const tl=gsap.timeline();
+    tl.to("#t3-l1",{opacity:1,duration:.2})
+      .to(l,{attr:{cx:290},duration:.7,ease:"power1.inOut",
+          onUpdate:function(){const p=this.progress();l.setAttribute("cy",90-Math.sin(p*Math.PI)*55);}},"<")
+      .set("#t3-weit",{attr:{fill:"#E8842B"}})
+      .to("#t3-weit-lbl",{opacity:1,duration:.3})
+      .to("#t3-l2",{opacity:1,duration:.2},"+=.3")
+      .to(l,{attr:{cx:262},duration:.45,ease:"back.out(2)",
+          onUpdate:function(){const p=this.progress();l.setAttribute("cy",90-Math.sin(p*Math.PI)*22);}})
+      .set("#t3-ziel",{attr:{fill:"#3FA64E"}})
+      .to("#t3-ziel-lbl",{opacity:1,duration:.3});
+  }
+
+  naechsteBtn.onclick=()=>{ idx++; ladeAufgabe(); gsap.fromTo(card.querySelector("#s3-aufgabe"),{opacity:0,y:10},{opacity:1,y:0,duration:.35}); };
+
+  ladeAufgabe();
+}
+
+/* ===================================================== */
+/* STATION 4 — Sachaufgabe                               */
+/* ===================================================== */
+function renderStation4(){
+  let idx=0;
+  const ST4_AUFGABEN=[
+    {name:"Mia", t1:28, t2:37, w1:"rote Blumen", w2:"gelbe Blumen", icon:"🌷", ding:"Blumen", falsch:"28 − 37", richtig:"28 + 37"},
+    {name:"Tim", t1:35, t2:27, w1:"Murmeln", w2:"Murmeln dazu", icon:"🔵", ding:"Murmeln", falsch:"35 − 27", richtig:"35 + 27"},
+  ];
+  const card = el(`
+    <div class="card">
+      ${stationKopf(4)}
+      <h2>Sachaufgabe lösen</h2>
+      <div class="merksatz" id="s4-text" style="background:var(--blau-pale);border-color:var(--blau);"></div>
+
+      <div class="frage-klein">1. Welche Rechnung passt?</div>
+      <div class="wahl" id="s4-wahl"></div>
+
+      <div class="hidden" id="teil2">
+        <div class="frage-klein">2. Rechne aus:</div>
+        <div class="eingabe-zeile" id="s4-zeile2"></div>
+        <button class="btn btn-pruefen" id="pruefen-rechnung">Prüfen</button>
+      </div>
+
+      <div class="hidden" id="teil3">
+        <div class="frage-klein">3. Schreibe den Antwortsatz:</div>
+        <div class="eingabe-zeile" id="s4-zeile3" style="font-size:18px;"></div>
+        <button class="btn btn-pruefen" id="pruefen-satz">Antwort prüfen</button>
+      </div>
+
+      <button class="btn btn-pruefen hidden" id="naechste">Nächste Aufgabe ➜</button>
+      ${weiterButton("Fertig – zur Auswertung ➜")}
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+
+  const naechsteBtn=card.querySelector("#naechste");
+
+  function ladeAufgabe(){
+    const A=ST4_AUFGABEN[idx];
+    card.querySelector("#s4-text").innerHTML=`${A.icon} ${A.name} hat <strong>${A.t1}</strong> ${A.w1} und <strong>${A.t2}</strong> ${A.w2}.<br>Wie viele ${A.ding} hat ${A.name} zusammen?`;
+    card.querySelector("#s4-wahl").innerHTML=`
+      <button class="wahl-btn" data-ok="false">${A.falsch}</button>
+      <button class="wahl-btn" data-ok="true">${A.richtig}</button>`;
+    card.querySelector("#s4-zeile2").innerHTML=`${A.t1} + ${A.t2} = <input type="text" inputmode="numeric" id="ergebnis" aria-label="Ergebnis">`;
+    card.querySelector("#s4-zeile3").innerHTML=`${A.name} hat zusammen <input type="text" inputmode="numeric" id="satz-zahl" class="gross" aria-label="Anzahl im Antwortsatz"> ${A.ding}.`;
+    card.querySelector("#teil2").classList.add("hidden");
+    card.querySelector("#teil3").classList.add("hidden");
+    card.querySelector("#pruefen-rechnung").disabled=false;
+    card.querySelector("#pruefen-satz").disabled=false;
+    naechsteBtn.classList.add("hidden");
+    const weiter=card.querySelector("#weiter");
+    if(weiter) weiter.classList.add("hidden");
+    const alt=card.querySelectorAll(".feedback"); alt.forEach(f=>f.remove());
+    bindeTeil1();
+  }
+
+  function bindeTeil1(){
+    const btns=card.querySelectorAll("#s4-wahl .wahl-btn");
+    btns.forEach(b=>{
+      b.onclick=()=>{
+        const ok=b.dataset.ok==="true";
+        if(ok){
+          btns.forEach(x=>x.disabled=true);
+          b.classList.add("richtig");
+          const alt=card.querySelectorAll(".feedback"); alt.forEach(f=>f.remove());
+          zeigeFeedback(card,"gut","Richtig! \u201Ezusammen\u201C bedeutet plus.");
+          const t2=card.querySelector("#teil2");
+          t2.classList.remove("hidden");
+          gsap.fromTo(t2,{opacity:0,y:12},{opacity:1,y:0,duration:.4});
+        } else {
+          b.classList.add("daneben"); b.disabled=true;
+          const alt=card.querySelectorAll(".feedback"); alt.forEach(f=>f.remove());
+          zeigeFeedback(card,"tipp","\u201Ezusammen\u201C heißt: alles addieren. Welches Zeichen passt?");
+        }
+      };
+    });
+  }
+
+  card.querySelector("#pruefen-rechnung").onclick=()=>{
+    const A=ST4_AUFGABEN[idx]; const summe=A.t1+A.t2;
+    const inp=card.querySelector("#ergebnis");
+    const ok=parseInt(inp.value,10)===summe;
+    inp.classList.toggle("ok",ok); inp.classList.toggle("fehler",!ok);
+    const alt=card.querySelectorAll(".feedback"); alt.forEach(f=>f.remove());
+    if(ok){
+      zeigeFeedback(card,"gut",`Super gerechnet: ${A.t1} + ${A.t2} = ${summe}.`);
+      card.querySelector("#pruefen-rechnung").disabled=true;
+      const t3=card.querySelector("#teil3");
+      t3.classList.remove("hidden");
+      gsap.fromTo(t3,{opacity:0,y:12},{opacity:1,y:0,duration:.4});
+    } else {
+      zeigeFeedback(card,"tipp","Trenne in Zehner und Einer. Dann zusammenrechnen.");
+    }
+  };
+
+  card.querySelector("#pruefen-satz").onclick=()=>{
+    const A=ST4_AUFGABEN[idx]; const summe=A.t1+A.t2;
+    const inp=card.querySelector("#satz-zahl");
+    const ok=parseInt(inp.value,10)===summe;
+    inp.classList.toggle("ok",ok); inp.classList.toggle("fehler",!ok);
+    const alt=card.querySelectorAll(".feedback"); alt.forEach(f=>f.remove());
+    if(ok){
+      card.querySelector("#pruefen-satz").disabled=true;
+      if(idx<ST4_AUFGABEN.length-1){
+        zeigeFeedback(card,"gut",`Perfekt! ${A.name} hat zusammen ${summe} ${A.ding}. Jetzt noch eine Aufgabe.`);
+        naechsteBtn.classList.remove("hidden");
+        gsap.fromTo(naechsteBtn,{scale:.8,opacity:0},{scale:1,opacity:1,duration:.35,ease:"back.out(1.7)"});
+      } else {
+        zeigeFeedback(card,"gut",`Perfekt! ${A.name} hat zusammen ${summe} ${A.ding}.`);
+        aktiviereWeiter(5,3);
+      }
+    } else {
+      zeigeFeedback(card,"tipp",`Trag das Ergebnis von ${A.t1} + ${A.t2} in den Satz ein.`);
+    }
+  };
+
+  naechsteBtn.onclick=()=>{ idx++; ladeAufgabe(); gsap.fromTo(card.querySelector("#s4-text"),{opacity:0,y:10},{opacity:1,y:0,duration:.35}); };
+
+  ladeAufgabe();
+}
+
+/* ===================================================== */
+/* ENDE                                                  */
+/* ===================================================== */
+function renderEnde(){
+  const card = el(`
+    <div class="card" style="text-align:center;">
+      <div class="emoji-gross">🎉</div>
+      <h1 style="font-size:26px;">Das kannst du jetzt wiederholen:</h1>
+      <ul class="liste-koennen" style="text-align:left;">
+        <li><span class="ic" aria-hidden="true">✅</span> Ich kann Zehner und Einer trennen.</li>
+        <li><span class="ic" aria-hidden="true">✅</span> Ich kann am Rechenstrich springen.</li>
+        <li><span class="ic" aria-hidden="true">✅</span> Ich kenne den Zehnertrick.</li>
+        <li><span class="ic" aria-hidden="true">✅</span> Ich schreibe bei Sachaufgaben einen Antwortsatz.</li>
+      </ul>
+      <p class="schluss">Du bist bereit. 💪</p>
+      <p class="lead" style="font-size:16px;">Für heute reicht es. Morgen rechnest du Schritt für Schritt.</p>
+      <button class="mini-link" id="nochmal">Noch einmal von vorne</button>
+    </div>
+  `);
+  screen.appendChild(card);
+  leinblenden(card);
+  progressEl.style.display="none";
+
+  // alle erledigt markieren + speichern
+  state.erledigt=[true,true,true,true]; save(state);
+
+  // Häkchen nacheinander
+  gsap.to(card.querySelectorAll(".liste-koennen li"),{
+    opacity:1, x:0, duration:.45, stagger:0.25, delay:0.3, ease:"power2.out"
+  });
+
+  document.getElementById("nochmal").onclick=()=>{
+    state={schritt:0,erledigt:[false,false,false,false]};
+    clearSave(); render();
+  };
+}
+
+/* ---------------- Start ---------------- */
+render();
+</script>
+</body>
+</html>
